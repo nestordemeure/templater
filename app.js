@@ -693,17 +693,16 @@ async function generatePDF() {
         // Draw images
         for (const imgData of page.images) {
             if (imgData.img) {
-                // Convert image to data URL
-                const canvas = document.createElement('canvas');
-                canvas.width = imgData.img.width;
-                canvas.height = imgData.img.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(imgData.img, 0, 0);
-                const imgDataUrl = canvas.toDataURL('image/png');
+                // Use the original data URL to preserve encoding
+                // jsPDF automatically deduplicates images with the same data URL
+                const imgSrc = imgData.img.src;
+                const imageFormat = imgSrc.startsWith('data:image/png') ? 'PNG' :
+                                   imgSrc.startsWith('data:image/jpeg') || imgSrc.startsWith('data:image/jpg') ? 'JPEG' :
+                                   'PNG'; // default fallback
 
                 pdf.addImage(
-                    imgDataUrl,
-                    'PNG',
+                    imgSrc,
+                    imageFormat,
                     imgData.x,
                     imgData.y,
                     imgData.width,
