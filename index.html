@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Card Templater</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        .upload-zone {
+            border: 2px dashed #cbd5e1;
+            transition: all 0.3s ease;
+        }
+        .upload-zone:hover {
+            border-color: #3b82f6;
+            background-color: #f8fafc;
+        }
+        .upload-zone.dragover {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+        .preview-container {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+        }
+        .preview-page {
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin: 20px auto;
+        }
+        .preview-page-container {
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin: 20px auto;
+            position: relative;
+        }
+        .card-slot {
+            position: absolute;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+            cursor: grab;
+            overflow: hidden;
+        }
+        .card-slot:hover {
+            border-color: #3b82f6;
+            z-index: 10;
+        }
+        .card-slot:active {
+            cursor: grabbing;
+        }
+        .card-slot.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+        .card-slot img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+        }
+        .card-delete-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 28px;
+            height: 28px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            font-size: 18px;
+            line-height: 1;
+            font-weight: bold;
+            z-index: 20;
+        }
+        .card-slot:hover .card-delete-btn {
+            opacity: 1;
+        }
+        .card-delete-btn:hover {
+            background: #dc2626;
+        }
+        .cut-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Business Card Templater</h1>
+            <p class="text-gray-600">Upload your card images, configure the layout, and generate print-ready PDFs</p>
+            <p class="text-sm text-blue-600 mt-2">🔒 Your images stay on your computer - no uploads to any server</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Panel: Upload & Controls -->
+            <div class="lg:col-span-1 space-y-6">
+
+                <!-- Image Upload Sections -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-semibold mb-4">Images</h2>
+
+                    <!-- Front Images -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Front Images</label>
+                        <div class="upload-zone rounded-lg p-8 text-center cursor-pointer" id="frontUploadZone">
+                            <input type="file" id="frontFileInput" accept="image/*" multiple class="hidden">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <p class="mt-2 text-sm text-gray-600">Click or drag images here</p>
+                            <p class="text-xs text-gray-500 mt-1" id="frontFileCount">No files selected</p>
+                        </div>
+                    </div>
+
+                    <!-- Back Images -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Back Images (optional)</label>
+                        <div class="upload-zone rounded-lg p-8 text-center cursor-pointer" id="backUploadZone">
+                            <input type="file" id="backFileInput" accept="image/*" multiple class="hidden">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <p class="mt-2 text-sm text-gray-600">Click or drag images here</p>
+                            <p class="text-xs text-gray-500 mt-1" id="backFileCount">No files selected</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configuration -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-semibold mb-4">Configuration</h2>
+
+                    <!-- Units Toggle -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Units</label>
+                        <div class="flex space-x-2">
+                            <button id="unitImperial" class="flex-1 py-2 px-4 rounded bg-blue-600 text-white text-sm font-medium">Inches</button>
+                            <button id="unitMetric" class="flex-1 py-2 px-4 rounded bg-gray-200 text-gray-700 text-sm font-medium">mm</button>
+                        </div>
+                    </div>
+
+                    <!-- Paper Size -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Paper Size</label>
+                        <select id="paperSize" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                            <option value="letter">Letter (8.5" × 11")</option>
+                            <option value="a4">A4 (210mm × 297mm)</option>
+                            <option value="legal">Legal (8.5" × 14")</option>
+                            <option value="tabloid">Tabloid (11" × 17")</option>
+                        </select>
+                    </div>
+
+                    <!-- Card Preset -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Card Preset</label>
+                        <select id="cardPreset" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                            <option value="us_business">US Business Card (3.5" × 2")</option>
+                            <option value="eu_business">European Business Card (85mm × 55mm)</option>
+                            <option value="bridge">Bridge Playing Card (2.25" × 3.5")</option>
+                            <option value="poker">Poker Playing Card (2.5" × 3.5")</option>
+                            <option value="custom">Custom Size</option>
+                        </select>
+                    </div>
+
+                    <!-- Card Dimensions -->
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Card Width</label>
+                            <input type="number" id="cardWidth" step="0.01" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Card Height</label>
+                            <input type="number" id="cardHeight" step="0.01" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Grid Layout -->
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Rows</label>
+                            <input type="number" id="gridRows" min="1" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Columns</label>
+                            <input type="number" id="gridCols" min="1" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Options -->
+                    <div class="space-y-3">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="showCutLines" checked class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-700">Show cut lines</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="fullPageMode" checked class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-700">Full page per image</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Generate Button -->
+                <button id="generatePDF" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow transition">
+                    Generate PDF
+                </button>
+            </div>
+
+            <!-- Right Panel: Preview -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-semibold mb-4">Preview</h2>
+                    <p class="text-sm text-gray-600 mb-4">Hover over images to delete or drag to reorder</p>
+                    <div id="previewContainer" class="preview-container rounded-lg p-4 overflow-auto" style="max-height: 800px;">
+                        <p class="text-center text-gray-500 py-20">Upload images to see preview</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
